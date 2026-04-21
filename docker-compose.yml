@@ -1,0 +1,14 @@
+services:
+  app:
+    image: vvviruz-command-center:v1
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env.docker
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./storage:/app/storage
+      - ./whisper.cpp:/app/whisper.cpp
+    restart: unless-stopped

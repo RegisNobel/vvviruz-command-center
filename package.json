@@ -1,0 +1,48 @@
+{
+  "name": "lyriclab",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint . --ext .ts,.tsx",
+    "typecheck": "tsc --noEmit",
+    "generate:auth-secret": "node scripts/generate-auth-secret.mjs",
+    "hash:admin-password": "node scripts/hash-admin-password.mjs",
+    "setup:whisper": "tsx scripts/setup-whisper.ts",
+    "sync:releases": "tsx scripts/sync-releases.ts",
+    "normalize:releases": "tsx scripts/normalize-release-titles.ts"
+  },
+  "dependencies": {
+    "@remotion/bundler": "4.0.448",
+    "@remotion/install-whisper-cpp": "4.0.448",
+    "@remotion/player": "4.0.448",
+    "@remotion/renderer": "4.0.448",
+    "clsx": "^2.1.1",
+    "execa": "^9.6.0",
+    "ffmpeg-static": "^5.2.0",
+    "ffprobe-static": "^3.1.0",
+    "lucide-react": "^0.469.0",
+    "music-metadata": "^10.5.1",
+    "next": "15.5.15",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "remotion": "4.0.448",
+    "tailwind-merge": "^2.5.5",
+    "wavesurfer.js": "^7.9.4",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.17.0",
+    "eslint-config-next": "15.5.15",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
