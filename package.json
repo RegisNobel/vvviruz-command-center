@@ -9,6 +9,11 @@
     "start": "next start",
     "lint": "eslint . --ext .ts,.tsx",
     "typecheck": "tsc --noEmit",
+    "db:generate": "node scripts/run-prisma.mjs generate",
+    "db:migrate:dev": "node scripts/run-prisma.mjs migrate dev",
+    "db:migrate:deploy": "node scripts/run-prisma.mjs migrate deploy",
+    "db:import": "tsx scripts/import-json-to-db.ts",
+    "db:studio": "node scripts/run-prisma.mjs studio",
     "generate:auth-secret": "node scripts/generate-auth-secret.mjs",
     "hash:admin-password": "node scripts/hash-admin-password.mjs",
     "setup:whisper": "tsx scripts/setup-whisper.ts",
@@ -16,6 +21,7 @@
     "normalize:releases": "tsx scripts/normalize-release-titles.ts"
   },
   "dependencies": {
+    "@prisma/client": "^6.16.0",
     "@remotion/bundler": "4.0.448",
     "@remotion/install-whisper-cpp": "4.0.448",
     "@remotion/player": "4.0.448",
@@ -27,9 +33,11 @@
     "lucide-react": "^0.469.0",
     "music-metadata": "^10.5.1",
     "next": "15.5.15",
+    "prisma": "^6.16.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "remotion": "4.0.448",
+    "server-only": "^0.0.1",
     "tailwind-merge": "^2.5.5",
     "wavesurfer.js": "^7.9.4",
     "zod": "^3.24.1"

@@ -1,10 +1,7 @@
-import fs from "node:fs/promises";
-import path from "node:path";
-
 import {hydrateRelease} from "../lib/releases";
+import {saveRelease} from "../lib/repositories/releases";
+import {readReleaseSummaries, readRelease} from "../lib/server/releases";
 import type {ReleaseRecord} from "../lib/types";
-
-const releasesDir = path.join(process.cwd(), "storage", "releases");
 
 const explicitTitleMap = new Map<string, string>([
   ["Multiversus 1: king", "Multiversus: King - Meruem vs. Beru"],
@@ -92,24 +89,13 @@ function normalizeTitle(title: string) {
 }
 
 async function readReleases() {
-  const files = (await fs.readdir(releasesDir)).filter((fileName) =>
-    fileName.endsWith(".json")
+  const summaries = await readReleaseSummaries();
+
+  return Promise.all(
+    summaries.map(async (summary) => ({
+      release: hydrateRelease(await readRelease(summary.id))
+    }))
   );
-
-  const releases = await Promise.all(
-    files.map(async (fileName) => {
-      const filePath = path.join(releasesDir, fileName);
-      const raw = JSON.parse(await fs.readFile(filePath, "utf8")) as ReleaseRecord;
-
-      return {
-        fileName,
-        filePath,
-        release: hydrateRelease(raw)
-      };
-    })
-  );
-
-  return releases;
 }
 
 async function normalizeReleaseTitles() {
@@ -139,7 +125,7 @@ async function normalizeReleaseTitles() {
       updated_on: new Date().toISOString()
     };
 
-    await fs.writeFile(entry.filePath, JSON.stringify(updatedRelease, null, 2), "utf8");
+    await saveRelease(updatedRelease);
 
     renamed.push({
       from: entry.release.title,

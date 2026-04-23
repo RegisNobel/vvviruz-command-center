@@ -112,7 +112,7 @@ export function ReleasesPageContent({releases}: {releases: ReleaseSummary[]}) {
   return (
     <main className="px-4 py-5 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-[1600px] space-y-6">
-        <section className="panel overflow-hidden px-6 py-7 sm:px-8">
+        <section className="sticky top-[89px] z-30 panel overflow-hidden border-[#32363d] bg-[#15181c]/95 px-6 py-7 shadow-[0_18px_44px_rgba(0,0,0,0.28)] backdrop-blur-xl sm:px-8">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <div className="pill">Release planning</div>

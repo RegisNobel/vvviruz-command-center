@@ -127,7 +127,15 @@ export type ReleaseStatus =
   | "Mix/Mastered"
   | "Published";
 
-export type ReleaseStageLabel = ReleaseStatus | "Not Started";
+export type ReleaseStageLabel =
+  | "Concept"
+  | "Cover Art"
+  | "Beat Made"
+  | "Lyrics"
+  | "Recorded"
+  | "Mix/Mastered"
+  | "Published"
+  | "Not Started";
 
 export type ReleaseType = "nerdcore" | "mainstream";
 

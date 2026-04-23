@@ -1,7 +1,9 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-import {createEmptyRelease, hydrateRelease} from "../lib/releases";
+import {createEmptyRelease} from "../lib/releases";
+import {saveRelease} from "../lib/repositories/releases";
+import {readReleaseSummaries, readRelease} from "../lib/server/releases";
 import type {ReleaseRecord} from "../lib/types";
 
 const releasesDir = path.join(process.cwd(), "storage", "releases");
@@ -305,28 +307,9 @@ function parseSongConcepts(rawSongIndex: string) {
 }
 
 async function readExistingReleases() {
-  const fileNames = (await fs.readdir(releasesDir)).filter((fileName) =>
-    fileName.endsWith(".json")
-  );
-  const releases = await Promise.all(
-    fileNames.map(async (fileName) => {
-      const raw = JSON.parse(
-        await fs.readFile(path.join(releasesDir, fileName), "utf8")
-      ) as ReleaseRecord;
+  const summaries = await readReleaseSummaries();
 
-      return hydrateRelease(raw);
-    })
-  );
-
-  return releases;
-}
-
-async function saveReleaseRecord(release: ReleaseRecord) {
-  await fs.writeFile(
-    path.join(releasesDir, `${release.id}.json`),
-    JSON.stringify(release, null, 2),
-    "utf8"
-  );
+  return Promise.all(summaries.map((summary) => readRelease(summary.id)));
 }
 
 async function syncReleaseCatalog(): Promise<SyncResult> {
@@ -353,7 +336,7 @@ async function syncReleaseCatalog(): Promise<SyncResult> {
 
     const nextRelease = createEmptyRelease({title: catalogTitle});
 
-    await saveReleaseRecord(nextRelease);
+    await saveRelease(nextRelease);
     releases.push(nextRelease);
     created += 1;
   }
@@ -372,7 +355,7 @@ async function syncReleaseCatalog(): Promise<SyncResult> {
       updated_on: new Date().toISOString()
     };
 
-    await saveReleaseRecord(updatedRelease);
+    await saveRelease(updatedRelease);
 
     const releaseIndex = releases.findIndex((release) => release.id === updatedRelease.id);
 

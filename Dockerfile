@@ -1,6 +1,7 @@
 FROM node:22-bookworm-slim AS base
 
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV DATABASE_URL=file:../storage/vvviruz-command-center.db
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     dumb-init \
@@ -38,7 +39,10 @@ RUN npm ci
 FROM deps AS builder
 
 COPY . .
-RUN npm run build
+RUN mkdir -p /app/storage \
+  && npx prisma generate \
+  && npx prisma db push --skip-generate \
+  && npm run build
 
 FROM base AS runner
 

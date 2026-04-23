@@ -11,8 +11,8 @@ import {createId} from "@/lib/utils";
 
 export const releaseStatusOptions = [
   "Concept Complete",
-  "Lyrics Finished",
   "Beat Made",
+  "Lyrics Finished",
   "Recorded",
   "Mix/Mastered",
   "Published"
@@ -20,8 +20,8 @@ export const releaseStatusOptions = [
 
 export const releaseChecklistKeys = [
   "concept_complete",
-  "lyrics_finished",
   "beat_made",
+  "lyrics_finished",
   "recorded",
   "mix_mastered",
   "published"
@@ -38,8 +38,8 @@ const releaseStageEntries: Array<{
   label: ReleaseStatus;
 }> = [
   {key: "concept_complete", label: "Concept Complete"},
-  {key: "lyrics_finished", label: "Lyrics Finished"},
   {key: "beat_made", label: "Beat Made"},
+  {key: "lyrics_finished", label: "Lyrics Finished"},
   {key: "recorded", label: "Recorded"},
   {key: "mix_mastered", label: "Mix/Mastered"},
   {key: "published", label: "Published"}
@@ -297,15 +297,35 @@ export function getReleaseProgressTone(progress: number) {
 }
 
 export function getReleaseStageLabel(release: ReleaseRecord): ReleaseStageLabel {
-  for (let index = releaseStageEntries.length - 1; index >= 0; index -= 1) {
-    const stage = releaseStageEntries[index];
-
-    if (release[stage.key]) {
-      return stage.label;
-    }
+  if (!release.concept_complete) {
+    return "Concept";
   }
 
-  return "Not Started";
+  if (!release.cover_art) {
+    return "Cover Art";
+  }
+
+  if (!release.beat_made) {
+    return "Beat Made";
+  }
+
+  if (!release.lyrics_finished) {
+    return "Lyrics";
+  }
+
+  if (!release.recorded) {
+    return "Recorded";
+  }
+
+  if (!release.mix_mastered) {
+    return "Mix/Mastered";
+  }
+
+  if (!release.published) {
+    return "Published";
+  }
+
+  return "Published";
 }
 
 export function summarizeRelease(release: ReleaseRecord): ReleaseSummary {

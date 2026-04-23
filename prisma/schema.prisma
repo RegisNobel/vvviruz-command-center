@@ -1,0 +1,144 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model AdminUser {
+  id                 String        @id
+  username           String        @unique
+  totpMethod         String?
+  totpEncryptedSecret String?
+  totpEnrolledAt     DateTime?
+  createdAt          DateTime
+  updatedAt          DateTime
+  sessions           AuthSession[]
+
+  @@index([username])
+}
+
+model AuthSession {
+  id                String    @id
+  userId            String
+  username          String
+  stage             String
+  factorMethod      String?
+  pendingTotpSecret String?
+  createdAt         DateTime
+  updatedAt         DateTime
+  expiresAt         DateTime
+  user              AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([userId])
+}
+
+model Release {
+  id               String                 @id
+  title            String
+  pinned           Boolean                @default(false)
+  collaborator     Boolean                @default(false)
+  collaboratorName String                 @default("")
+  upc              String                 @default("")
+  isrc             String                 @default("")
+  coverArtId       String?
+  coverArtFileName String?
+  coverArtUrl      String?
+  coverArtMimeType String?
+  lyrics           String                 @default("")
+  type             String                 @default("nerdcore")
+  releaseDate      String                 @default("")
+  conceptDetails   String                 @default("")
+  conceptComplete  Boolean                @default(false)
+  beatMade         Boolean                @default(false)
+  lyricsFinished   Boolean                @default(false)
+  recorded         Boolean                @default(false)
+  mixMastered      Boolean                @default(false)
+  published        Boolean                @default(false)
+  createdOn        DateTime
+  updatedOn        DateTime
+  tasks            ReleaseTask[]
+  streamingLinks   ReleaseStreamingLink[]
+  projects         LyricProject[]
+  copies           CopyEntry[]
+
+  @@index([pinned, updatedOn])
+}
+
+model ReleaseTask {
+  id        String   @id
+  releaseId String
+  text      String
+  completed Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime
+  updatedAt DateTime
+  release   Release  @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+
+  @@index([releaseId, sortOrder])
+}
+
+model ReleaseStreamingLink {
+  id        String   @id
+  releaseId String
+  platform  String
+  url       String
+  createdAt DateTime
+  updatedAt DateTime
+  release   Release  @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+
+  @@unique([releaseId, platform])
+  @@index([releaseId])
+}
+
+model LyricProject {
+  id                    String      @id
+  title                 String
+  releaseId             String?
+  audioJson             String?
+  backgroundJson        String
+  lyricsJson            String
+  animationStyle        String
+  aspectRatio           String
+  lyricPlacementJson    String
+  resolution            String
+  transcriptionLanguage String
+  workflowStep          String
+  transcriptionStatus   String
+  createdAt             DateTime
+  updatedAt             DateTime
+  release               Release?    @relation(fields: [releaseId], references: [id], onDelete: SetNull)
+  lines                 LyricLine[]
+
+  @@index([releaseId])
+  @@index([updatedAt])
+}
+
+model LyricLine {
+  id        String       @id
+  projectId String
+  text      String
+  startMs   Int
+  endMs     Int
+  sortOrder Int          @default(0)
+  project   LyricProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, sortOrder])
+}
+
+model CopyEntry {
+  id        String   @id
+  releaseId String?
+  hook      String
+  caption   String
+  type      String
+  createdOn DateTime
+  updatedOn DateTime
+  release   Release? @relation(fields: [releaseId], references: [id], onDelete: SetNull)
+
+  @@index([releaseId])
+  @@index([updatedOn])
+}

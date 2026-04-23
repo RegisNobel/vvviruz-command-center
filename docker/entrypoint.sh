@@ -11,5 +11,8 @@ mkdir -p /app/storage/releases
 mkdir -p /app/storage/copies
 mkdir -p /app/whisper.cpp
 
-exec "$@"
+if [ -n "${DATABASE_URL:-}" ] && [ -d /app/prisma/migrations ]; then
+  npx prisma migrate deploy
+fi
 
+exec "$@"

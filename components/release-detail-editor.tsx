@@ -28,7 +28,8 @@ import {AUTOSAVE_INTERVAL_MS} from "@/lib/constants";
 import {
   calculateReleaseProgress,
   createReleaseTask,
-  getReleaseProgressTone
+  getReleaseProgressTone,
+  getReleaseStageLabel
 } from "@/lib/releases";
 import {formatCopyType, getCopyHeading} from "@/lib/copy";
 import type {ReleaseChecklistKey} from "@/lib/releases";
@@ -37,33 +38,29 @@ import type {
   ProjectSummary,
   ReleaseCoverUploadResponse,
   ReleaseRecord,
+  ReleaseStageLabel,
   ReleaseType
 } from "@/lib/types";
 import {formatMs} from "@/lib/utils";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
-const stageFields: Array<{key: ReleaseChecklistKey; label: string}> = [
-  {key: "concept_complete", label: "Concept complete"},
-  {key: "lyrics_finished", label: "Lyrics finished"},
-  {key: "beat_made", label: "Beat made"},
-  {key: "recorded", label: "Recorded"},
-  {key: "mix_mastered", label: "Mix/Mastered"},
-  {key: "published", label: "Published"}
-];
-
-type SnapshotStageDefinition = {
-  key: ReleaseChecklistKey;
-  label: string;
+type ReleaseFlowStageDefinition = {
+  id: ReleaseChecklistKey | "cover_art";
+  checkboxKey?: ReleaseChecklistKey;
+  label: Exclude<ReleaseStageLabel, "Not Started">;
+  isComplete: (release: ReleaseRecord) => boolean;
   getRequirements: (
     release: ReleaseRecord
   ) => Array<{blocker: string; nextAction: string}>;
 };
 
-const snapshotStageDefinitions: SnapshotStageDefinition[] = [
+const releaseFlowStages: ReleaseFlowStageDefinition[] = [
   {
-    key: "concept_complete",
+    id: "concept_complete",
+    checkboxKey: "concept_complete",
     label: "Concept",
+    isComplete: (release) => release.concept_complete,
     getRequirements: (release) =>
       release.concept_details.trim()
         ? []
@@ -75,8 +72,31 @@ const snapshotStageDefinitions: SnapshotStageDefinition[] = [
           ]
   },
   {
-    key: "lyrics_finished",
+    id: "cover_art",
+    label: "Cover Art",
+    isComplete: (release) => Boolean(release.cover_art),
+    getRequirements: (release) =>
+      release.cover_art
+        ? []
+        : [
+            {
+              blocker: "Missing cover art",
+              nextAction: "Upload cover art"
+            }
+          ]
+  },
+  {
+    id: "beat_made",
+    checkboxKey: "beat_made",
+    label: "Beat Made",
+    isComplete: (release) => release.beat_made,
+    getRequirements: () => []
+  },
+  {
+    id: "lyrics_finished",
+    checkboxKey: "lyrics_finished",
     label: "Lyrics",
+    isComplete: (release) => release.lyrics_finished,
     getRequirements: (release) =>
       release.lyrics.trim()
         ? []
@@ -88,32 +108,26 @@ const snapshotStageDefinitions: SnapshotStageDefinition[] = [
           ]
   },
   {
-    key: "beat_made",
-    label: "Beat",
-    getRequirements: () => []
-  },
-  {
-    key: "recorded",
+    id: "recorded",
+    checkboxKey: "recorded",
     label: "Recorded",
+    isComplete: (release) => release.recorded,
     getRequirements: () => []
   },
   {
-    key: "mix_mastered",
+    id: "mix_mastered",
+    checkboxKey: "mix_mastered",
     label: "Mix/Mastered",
+    isComplete: (release) => release.mix_mastered,
     getRequirements: () => []
   },
   {
-    key: "published",
+    id: "published",
+    checkboxKey: "published",
     label: "Published",
+    isComplete: (release) => release.published,
     getRequirements: (release) => {
       const requirements: Array<{blocker: string; nextAction: string}> = [];
-
-      if (!release.cover_art) {
-        requirements.push({
-          blocker: "Missing cover art",
-          nextAction: "Upload cover art"
-        });
-      }
 
       if (release.collaborator && !release.collaborator_name.trim()) {
         requirements.push({
@@ -136,14 +150,14 @@ const snapshotStageDefinitions: SnapshotStageDefinition[] = [
 
 function getCurrentSnapshotStageDefinition(release: ReleaseRecord) {
   return (
-    snapshotStageDefinitions.find((stage) => !release[stage.key]) ??
-    snapshotStageDefinitions[snapshotStageDefinitions.length - 1]
+    releaseFlowStages.find((stage) => !stage.isComplete(release)) ??
+    releaseFlowStages[releaseFlowStages.length - 1]
   );
 }
 
 function getSnapshotValidationWarnings(release: ReleaseRecord) {
-  return snapshotStageDefinitions.flatMap((stage) => {
-    if (!release[stage.key]) {
+  return releaseFlowStages.flatMap((stage) => {
+    if (!stage.checkboxKey || !stage.isComplete(release)) {
       return [];
     }
 
@@ -196,7 +210,7 @@ function normalizeExternalUrl(value: string) {
 }
 
 function getSnapshotStage(release: ReleaseRecord) {
-  return getCurrentSnapshotStageDefinition(release).label;
+  return getReleaseStageLabel(release);
 }
 
 function getSnapshotNextAction(release: ReleaseRecord) {
@@ -207,7 +221,7 @@ function getSnapshotNextAction(release: ReleaseRecord) {
     return requirements[0].nextAction;
   }
 
-  if (!release[currentStage.key]) {
+  if (currentStage.checkboxKey && !currentStage.isComplete(release)) {
     return `Mark ${currentStage.label} complete`;
   }
 
@@ -220,18 +234,41 @@ function getSnapshotBlockers(release: ReleaseRecord) {
   const blockers = [...getSnapshotValidationWarnings(release)];
 
   if (currentStageRequirements.length > 0) {
-    if (!release[currentStage.key]) {
-      blockers.push(...currentStageRequirements.map((requirement) => requirement.blocker));
-    }
-
+    blockers.push(...currentStageRequirements.map((requirement) => requirement.blocker));
     return blockers;
   }
 
-  if (!release[currentStage.key]) {
+  if (currentStage.checkboxKey && !currentStage.isComplete(release)) {
     blockers.push(`${currentStage.label} approval pending`);
   }
 
   return blockers;
+}
+
+const orderedCheckboxStageKeys = releaseFlowStages.flatMap((stage) =>
+  stage.checkboxKey ? [stage.checkboxKey] : []
+);
+
+function getStageUnlockReason(release: ReleaseRecord, key: ReleaseChecklistKey) {
+  const stageIndex = releaseFlowStages.findIndex((stage) => stage.checkboxKey === key);
+
+  if (stageIndex <= 0) {
+    return null;
+  }
+
+  const blockingStage = releaseFlowStages
+    .slice(0, stageIndex)
+    .find((stage) => !stage.isComplete(release));
+
+  if (!blockingStage) {
+    return null;
+  }
+
+  if (blockingStage.id === "cover_art") {
+    return "Upload cover art first.";
+  }
+
+  return `Mark ${blockingStage.label} complete first.`;
 }
 
 const pageShellClass =
@@ -467,6 +504,27 @@ export function ReleaseDetailEditor({
     setRelease((current) => mutator(current));
     setHasPendingChanges(true);
     setMessage(null);
+  }
+
+  function handleStageToggle(key: ReleaseChecklistKey, checked: boolean) {
+    updateRelease((current) => {
+      const nextRelease = {
+        ...current,
+        [key]: checked
+      };
+
+      if (checked) {
+        return nextRelease;
+      }
+
+      const keyIndex = orderedCheckboxStageKeys.indexOf(key);
+
+      for (const downstreamKey of orderedCheckboxStageKeys.slice(keyIndex + 1)) {
+        nextRelease[downstreamKey] = false;
+      }
+
+      return nextRelease;
+    });
   }
 
   async function handleManualSave() {
@@ -928,25 +986,6 @@ export function ReleaseDetailEditor({
             <section className={`${pagePanelClass} space-y-4 px-6 py-6`}>
               <div>
                 <p className={pageLabelClass}>Section 3</p>
-                <h2 className="mt-2 text-2xl font-semibold text-[#f0eadf]">Lyrics</h2>
-              </div>
-
-              <textarea
-                className={`${pageInputClass} min-h-[220px]`}
-                onChange={(event) =>
-                  updateRelease((current) => ({
-                    ...current,
-                    lyrics: event.target.value
-                  }))
-                }
-                placeholder="Paste or write the full lyrics here..."
-                value={release.lyrics}
-              />
-            </section>
-
-            <section className={`${pagePanelClass} space-y-4 px-6 py-6`}>
-              <div>
-                <p className={pageLabelClass}>Section 4</p>
                 <h2 className="mt-2 text-2xl font-semibold text-[#f0eadf]">Cover Art</h2>
               </div>
 
@@ -1023,7 +1062,115 @@ export function ReleaseDetailEditor({
 
             <section className={`${pagePanelClass} space-y-4 px-6 py-6`}>
               <div>
+                <p className={pageLabelClass}>Section 4</p>
+                <h2 className="mt-2 text-2xl font-semibold text-[#f0eadf]">Lyrics</h2>
+              </div>
+
+              <textarea
+                className={`${pageInputClass} min-h-[220px]`}
+                onChange={(event) =>
+                  updateRelease((current) => ({
+                    ...current,
+                    lyrics: event.target.value
+                  }))
+                }
+                placeholder="Paste or write the full lyrics here..."
+                value={release.lyrics}
+              />
+            </section>
+
+            <section className={`${pagePanelClass} space-y-4 px-6 py-6`}>
+              <div>
                 <p className={pageLabelClass}>Section 5</p>
+                <h2 className="mt-2 text-2xl font-semibold text-[#f0eadf]">
+                  Stage Completion
+                </h2>
+                <p className="mt-2 text-sm text-[#8a9098]">
+                  Move through the release in order: concept, cover art, beat made,
+                  lyrics, recorded, mix/mastered, then published. Each checkbox
+                  unlocks only after every earlier stage is complete.
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                {releaseFlowStages.map((stage) => {
+                  if (!stage.checkboxKey) {
+                    const coverArtComplete = stage.isComplete(release);
+
+                    return (
+                      <div
+                        className={`rounded-[20px] border px-4 py-3 text-sm ${
+                          coverArtComplete
+                            ? "border-[#5f4b1f] bg-[#1a1710] text-[#efe7d7]"
+                            : "border-[#31353b] bg-[#14171b] text-[#d1d5db]"
+                        }`}
+                        key={stage.id}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="font-semibold">{stage.label}</span>
+                          <span
+                            className={
+                              coverArtComplete ? pageAccentPillClass : pagePillClass
+                            }
+                          >
+                            {coverArtComplete ? "Complete" : "Missing"}
+                          </span>
+                        </div>
+                        <p className="mt-2 text-xs leading-5 text-[#8a9098]">
+                          {coverArtComplete
+                            ? "Cover art is in place and the next stage is unlocked."
+                            : "Upload cover art in the section above to unlock Beat Made."}
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  const unlockReason = getStageUnlockReason(release, stage.checkboxKey);
+                  const isDisabled = !release[stage.checkboxKey] && Boolean(unlockReason);
+                  const stageRequirements = stage.getRequirements(release);
+                  const helperText = unlockReason
+                    ? unlockReason
+                    : stageRequirements.length > 0
+                      ? stageRequirements[0].nextAction
+                      : release[stage.checkboxKey]
+                        ? "Stage complete."
+                        : "Ready to check when this stage is approved.";
+
+                  return (
+                    <label
+                      className={`rounded-[20px] border px-4 py-3 text-sm transition ${
+                        release[stage.checkboxKey]
+                          ? "border-[#5f4b1f] bg-[#1a1710] text-[#efe7d7]"
+                          : isDisabled
+                            ? "border-[#2b2f35] bg-[#111419] text-[#70757d]"
+                            : "border-[#31353b] bg-[#14171b] text-[#d1d5db]"
+                      }`}
+                      key={stage.id}
+                    >
+                      <span className="flex items-center gap-3 font-semibold">
+                        <input
+                          checked={release[stage.checkboxKey]}
+                          className={pageCheckboxClass}
+                          disabled={isDisabled}
+                          onChange={(event) =>
+                            handleStageToggle(stage.checkboxKey!, event.target.checked)
+                          }
+                          type="checkbox"
+                        />
+                        {stage.label}
+                      </span>
+                      <span className="mt-2 block text-xs leading-5 text-[#8a9098]">
+                        {helperText}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </section>
+
+            <section className={`${pagePanelClass} space-y-4 px-6 py-6`}>
+              <div>
+                <p className={pageLabelClass}>Section 6</p>
                 <h2 className="mt-2 text-2xl font-semibold text-[#f0eadf]">
                   Streaming Links
                 </h2>
@@ -1095,7 +1242,7 @@ export function ReleaseDetailEditor({
 
             <section className={`${pagePanelClass} space-y-4 px-6 py-6`}>
               <div>
-                <p className={pageLabelClass}>Section 6</p>
+                <p className={pageLabelClass}>Section 7</p>
                 <h2 className="mt-2 text-2xl font-semibold text-[#f0eadf]">
                   Generated Clips
                 </h2>
@@ -1169,7 +1316,7 @@ export function ReleaseDetailEditor({
 
             <section className={`${pagePanelClass} space-y-4 px-6 py-6`}>
               <div>
-                <p className={pageLabelClass}>Section 7</p>
+                <p className={pageLabelClass}>Section 8</p>
                 <h2 className="mt-2 text-2xl font-semibold text-[#f0eadf]">
                   Copy Pairs
                 </h2>
@@ -1241,44 +1388,6 @@ export function ReleaseDetailEditor({
               </div>
             </section>
 
-            <section className={`${pagePanelClass} space-y-4 px-6 py-6`}>
-              <div>
-                <p className={pageLabelClass}>Section 8</p>
-                <h2 className="mt-2 text-2xl font-semibold text-[#f0eadf]">
-                  Stage Completion
-                </h2>
-                <p className="mt-2 text-sm text-[#8a9098]">
-                  Check off each stage as soon as it is done. Progress is calculated
-                  from these stage checkboxes and your task list.
-                </p>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                {stageFields.map((field) => (
-                  <label
-                    className={`flex items-center gap-3 rounded-[20px] border px-4 py-3 text-sm font-semibold transition ${
-                      release[field.key]
-                        ? "border-[#5f4b1f] bg-[#1a1710] text-[#efe7d7]"
-                        : "border-[#31353b] bg-[#14171b] text-[#d1d5db]"
-                    }`}
-                    key={field.key}
-                  >
-                    <input
-                      checked={release[field.key]}
-                      className={pageCheckboxClass}
-                      onChange={(event) =>
-                        updateRelease((current) => ({
-                          ...current,
-                          [field.key]: event.target.checked
-                        }))
-                      }
-                      type="checkbox"
-                    />
-                    {field.label}
-                  </label>
-                ))}
-              </div>
-            </section>
           </div>
 
           <aside className="space-y-6">
