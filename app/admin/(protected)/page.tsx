@@ -1,5 +1,12 @@
 import Link from "next/link";
-import {ArrowRight, BarChart3, Clapperboard, Captions, Music4} from "lucide-react";
+import {
+  ArrowRight,
+  BarChart3,
+  Clapperboard,
+  Captions,
+  Globe2,
+  Music4
+} from "lucide-react";
 
 export default function AdminHomePage() {
   return (
@@ -13,14 +20,14 @@ export default function AdminHomePage() {
                 vvviruz&apos; command center
               </h1>
               <p className="mt-4 max-w-3xl text-base leading-7 text-slate-600 sm:text-lg">
-                Keep Lyric Lab, Copy Lab, Analytics, and release planning in one
-                local-first workspace. Build lyric videos, pair hooks with captions,
+                Keep Video Lab, Copy Lab, Analytics, and release planning in one
+                local-first workspace. Build video clips, pair hooks with captions,
                 track rollout progress, and stay inside a clean single-user setup.
               </p>
 
               <div className="mt-6 flex flex-wrap gap-3">
                 <span className="pill">Private admin area</span>
-                <span className="pill">Local JSON storage</span>
+                <span className="pill">SQLite + local media storage</span>
                 <span className="pill">TOTP protected</span>
               </div>
             </div>
@@ -30,9 +37,9 @@ export default function AdminHomePage() {
                 <p className="field-label">Inside this workspace</p>
                 <div className="mt-4 space-y-4">
                   <div className="rounded-[22px] bg-white/80 p-4">
-                    <p className="text-sm font-semibold text-slate-900">Lyric Lab</p>
+                    <p className="text-sm font-semibold text-slate-900">Video Lab</p>
                     <p className="mt-2 text-sm leading-6 text-slate-600">
-                      Upload audio, transcribe, style, preview, and export lyric videos.
+                      Upload audio, transcribe, style, preview, and export video clips.
                     </p>
                   </div>
                   <div className="rounded-[22px] bg-white/80 p-4">
@@ -59,7 +66,29 @@ export default function AdminHomePage() {
           </div>
         </section>
 
-        <section className="grid gap-6 lg:grid-cols-2 2xl:grid-cols-4">
+        <section className="grid gap-6 lg:grid-cols-2 2xl:grid-cols-5">
+          <Link
+            className="panel group px-6 py-7 transition hover:-translate-y-0.5 hover:border-coral/40 hover:bg-white/80"
+            href="/admin/site"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="pill">
+                  <Globe2 size={12} />
+                  Public Site
+                </div>
+                <h2 className="mt-4 text-2xl font-semibold text-ink">
+                  Manage the public website
+                </h2>
+                <p className="mt-3 max-w-xl text-sm leading-6 text-slate-600">
+                  Update bios, hero copy, social links, and link-hub items from one
+                  dedicated admin page.
+                </p>
+              </div>
+              <ArrowRight className="mt-1 transition group-hover:translate-x-1" size={20} />
+            </div>
+          </Link>
+
           <Link
             className="panel group px-6 py-7 transition hover:-translate-y-0.5 hover:border-coral/40 hover:bg-white/80"
             href="/admin/analytics"
@@ -83,19 +112,19 @@ export default function AdminHomePage() {
 
           <Link
             className="panel group px-6 py-7 transition hover:-translate-y-0.5 hover:border-coral/40 hover:bg-white/80"
-            href="/admin/lyric-lab"
+            href="/admin/video-lab"
           >
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="pill">
                   <Music4 size={12} />
-                  Lyric Lab
+                  Video Lab
                 </div>
                 <h2 className="mt-4 text-2xl font-semibold text-ink">
-                  Open the lyric video studio
+                  Open the video studio
                 </h2>
                 <p className="mt-3 max-w-xl text-sm leading-6 text-slate-600">
-                  Build lyric videos from trimmed audio with local transcription,
+                  Build video clips from trimmed audio with local transcription,
                   instant preview, and export.
                 </p>
               </div>

@@ -39,6 +39,7 @@ model AuthSession {
 model Release {
   id               String                 @id
   title            String
+  slug             String                 @unique
   pinned           Boolean                @default(false)
   collaborator     Boolean                @default(false)
   collaboratorName String                 @default("")
@@ -47,11 +48,21 @@ model Release {
   coverArtId       String?
   coverArtFileName String?
   coverArtUrl      String?
+  coverArtPath     String                 @default("")
   coverArtMimeType String?
   lyrics           String                 @default("")
   type             String                 @default("nerdcore")
   releaseDate      String                 @default("")
   conceptDetails   String                 @default("")
+  publicDescription String                @default("")
+  publicLongDescription String            @default("")
+  spotifyUrl       String                 @default("")
+  appleMusicUrl    String                 @default("")
+  youtubeUrl       String                 @default("")
+  isPublished      Boolean                @default(false)
+  isFeatured       Boolean                @default(false)
+  featuredVideoUrl String                 @default("")
+  publicLyricsEnabled Boolean             @default(false)
   conceptComplete  Boolean                @default(false)
   beatMade         Boolean                @default(false)
   lyricsFinished   Boolean                @default(false)
@@ -66,6 +77,8 @@ model Release {
   copies           CopyEntry[]
 
   @@index([pinned, updatedOn])
+  @@index([isPublished, releaseDate])
+  @@index([isFeatured, releaseDate])
 }
 
 model ReleaseTask {
@@ -141,4 +154,21 @@ model CopyEntry {
 
   @@index([releaseId])
   @@index([updatedOn])
+}
+
+model SiteSettings {
+  id             String   @id
+  artistName     String   @default("vvviruz")
+  tagline        String   @default("")
+  shortBio       String   @default("")
+  longBio        String   @default("")
+  contactEmail   String   @default("")
+  bookingEmail   String   @default("")
+  socialLinks    String   @default("[]")
+  heroText       String   @default("")
+  aboutContent   String   @default("")
+  linksPageItems String   @default("[]")
+  siteContent    String   @default("{}")
+  createdOn      DateTime
+  updatedOn      DateTime
 }

@@ -9,6 +9,7 @@ import {Readable} from "node:stream";
 import {NextResponse} from "next/server";
 
 import {requireAuthenticatedApiRequest} from "@/lib/auth/server";
+import {canPubliclyReadCoverAsset} from "@/lib/repositories/public-site";
 import {resolveAssetPath} from "@/lib/server/storage";
 
 function getContentType(fileName: string) {
@@ -26,6 +27,8 @@ function getContentType(fileName: string) {
       return "image/jpeg";
     case ".png":
       return "image/png";
+    case ".svg":
+      return "image/svg+xml";
     case ".webp":
       return "image/webp";
     case ".mp4":
@@ -96,12 +99,6 @@ export async function GET(
     params: Promise<{kind: string; file: string}>;
   }
 ) {
-  const auth = await requireAuthenticatedApiRequest(request);
-
-  if (auth instanceof Response) {
-    return auth;
-  }
-
   try {
     const {kind, file} = await params;
 
@@ -109,9 +106,21 @@ export async function GET(
       kind !== "audio" &&
       kind !== "background" &&
       kind !== "cover" &&
-      kind !== "export"
+      kind !== "export" &&
+      kind !== "site-icon"
     ) {
       return NextResponse.json({message: "Invalid asset type."}, {status: 400});
+    }
+
+    const isPublicAsset =
+      kind === "site-icon" || (kind === "cover" && (await canPubliclyReadCoverAsset(file)));
+
+    if (!isPublicAsset) {
+      const auth = await requireAuthenticatedApiRequest(request);
+
+      if (auth instanceof Response) {
+        return auth;
+      }
     }
 
     const filePath = await resolveAssetPath(kind, file);

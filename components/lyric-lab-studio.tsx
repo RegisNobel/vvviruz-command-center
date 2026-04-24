@@ -84,7 +84,7 @@ const stepCopy: Record<
     eyebrow: "Step 2",
     title: "Choose the source clip",
     description:
-      "Upload the audio for this lyric video. The project is created and saved as soon as the file lands."
+      "Upload the audio for this video clip. The project is created and saved as soon as the file lands."
   },
   trim: {
     eyebrow: "Step 3",
@@ -96,7 +96,7 @@ const stepCopy: Record<
     eyebrow: "Step 4",
     title: "Auto-transcribe the clip",
     description:
-      "LyricLab runs local Whisper with auto, English, French, or Spanish support and saves the synced lyric lines automatically."
+      "Video Lab runs local Whisper with auto, English, French, or Spanish support and saves the synced lyric lines automatically."
   },
   edit: {
     eyebrow: "Step 5",
@@ -899,7 +899,7 @@ export function LyricLabStudio({
     const link = document.createElement("a");
 
     link.href = url;
-    link.download = `${project.title || "lyriclab"}.srt`;
+    link.download = `${project.title || "videolab"}.srt`;
     link.click();
     URL.revokeObjectURL(url);
     setMessage("SRT exported.");
@@ -1243,7 +1243,7 @@ export function LyricLabStudio({
         <section className="panel overflow-hidden px-6 py-7 sm:px-8">
           <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
             <div>
-              <div className="pill">Local-first lyric video studio</div>
+              <div className="pill">Local-first video creation studio</div>
               <p className="mt-5 text-sm font-semibold uppercase tracking-[0.22em] text-slate-500">
                 {currentCopy.eyebrow}
               </p>
@@ -1276,7 +1276,7 @@ export function LyricLabStudio({
                 <p className="mt-3 text-2xl font-semibold text-ink">{project.title}</p>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
                   {message ??
-                    "Upload a clip to begin. LyricLab now walks through one step at a time and saves progress automatically."}
+                    "Upload a clip to begin. Video Lab now walks through one step at a time and saves progress automatically."}
                 </p>
                 <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                   <div className="rounded-[20px] bg-white/80 p-4">
